@@ -66,7 +66,7 @@ void init(void){
    gpioSetMode(relaycus2, PI_OUTPUT);
    gpioSetMode(relaycus3, PI_OUTPUT);
    gpioSetMode(relaycus4, PI_OUTPUT);	
-   //   gpioSetMode(23, PI_INPUT);
+   //gpioSetMode(23, PI_INPUT);
 
 }
 
@@ -80,43 +80,62 @@ void deinit(void){
 }
 
 int select_relay(int relay){
-	if (relay == 1){
-		return RELAY1;
-	}
-	else if (relay == 2){
-		return RELAY2;
-	}
-	else if (relay == 3){
-		return RELAY3;
-	}
-	else if (relay == 4){
-		return RELAY4;
-	}
-	return RELAYOFF;
+    if (relay == 1){
+	return RELAY1;
+    }
+    else if (relay == 2){
+	return RELAY2;
+    }
+    else if (relay == 3){
+	return RELAY3;
+    }
+    else if (relay == 4){
+	return RELAY4;
+    }
+    return RELAYOFF;
 }
 
 
 void relay_control(bool state, int relay){
-	char buf[2];
-	int control = select_relay(relay);
+    char buf[2];
+    int control = select_relay(relay);
 	
-	if (state == 1){
-		buf[0] = 0x06;		//Address
+    if (state == 1){
+	buf[0] = 0x06;		//Address
         buf[1] = control;	//DATA
-	}
-	else if (state == 0){
-		buf[0] = 0x06;     
-        buf[1] = RELAYOFF; //OFF
-	}
-	bcm2835_i2c_write(buf,2);
+    }
+    else if (state == 0){
+	buf[0] = 0x06;     
+	buf[1] = RELAYOFF; //OFF
+    }
+    bcm2835_i2c_write(buf,2);
 }
 
-void position_feedback(){}
+void hb_control(int direction){
+    if(direction == 1){ //send in
+	relay_control(2,1);
+	relay_control(3,1);
+	relay_control(4,0);
+	relay_control(1,0);
+    }
+    else if(direction == 2){ // send out
+	relay_control(2,0);
+	relay_control(3,0);
+	relay_control(4,1);
+	relay_control(1,1);
+    }
+    else{
+	relay_control(1,0);
+	relay_control(2,0);
+	relay_control(3,0);
+	relay_control(4,0);
+    }
+}
+
 void act_control(int active_act, int direction){
     //gpioWrite(18, 1); /* on */
     if(direction == 1){
 	relay_control(1,1);
-		
     }
     else if(direction == 2){
 		
@@ -131,7 +150,7 @@ void act_control(int active_act, int direction){
 }
 int stateupdate(int state, inputmicroswitches micro){
     if (state == 0){ // just turned on/restarted, act 1 must be in
-	if (mirco1in == 1){
+	if (micro.micro1in == 1){
 	    return 1;
 	}
 	else{
@@ -139,7 +158,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 1){ // act 1 moved out
-	if (mirco1out == 1){
+	if (micro.mirco1out == 1){
 	    return 2;
 	}
 	else{
@@ -147,7 +166,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 2){ // act 1 finished, at in position
-	if (mirco1in == 1){
+	if (micro.mirco1in == 1){
 	    return 3;
 	}
 	else{
@@ -155,7 +174,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 3){ // act 2 starting
-	if (mirco2out == 1){
+	if (micro.mirco2out == 1){
 	    return 4;
 	}
 	else{
@@ -163,7 +182,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 4){ // act 2 finished, at in position
-	if (mirco2in == 1){
+	if (micro.mirco2in == 1){
 	    return 5;
 	}
 	else{
@@ -171,7 +190,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 5){ // act 3 starting
-	if (mirco3out == 1){
+	if (micro.mirco3out == 1){
 	    return 6;
 	}
 	else{
@@ -179,7 +198,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 6){ // act 3 finished, at in position
-	if (mirco3in == 1){
+	if (micro.mirco3in == 1){
 	    return 7;
 	}
 	else{
@@ -187,7 +206,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 7){ // act 4 starting
-	if (mirco4out == 1){
+	if (micro.mirco4out == 1){
 	    return 8;
 	}
 	else{
@@ -195,7 +214,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 8){ // act 3 finished, at in position
-	if (mirco4in == 1){
+	if (micro.mirco4in == 1){
 	    return 0;
 	}
 	else{
@@ -205,8 +224,15 @@ int stateupdate(int state, inputmicroswitches micro){
     return state;
 }
 inputmicroswitches updatemicro(inputmicroswitches micro){
-    gpioRead(23)
-    
+    micro.micro1in = gpioRead(mirco1inpin);
+    micro.micro1out = gpioRead(mirco1outpin);
+    micro.micro2in = gpioRead(mirco2inpin);
+    micro.micro2out = gpioRead(mirco2outpin);
+    micro.micro3in = gpioRead(mirco3inpin);
+    micro.micro3out = gpioRead(mirco3outpin);
+    micro.micro4in = gpioRead(mirco4inpin);
+    micro.micro4out = gpioRead(mirco4outpin);
+    return micro;
 }
 
 
@@ -222,7 +248,6 @@ int main(int argc, char **argv)  {
 	micro = updatemicro(micro);
 	state = stateupdate(state, micro);
 	    
-	position_feedback();
 	act_control(active_act, direction);
 		
 	relay_control(1,count);
