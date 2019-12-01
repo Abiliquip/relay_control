@@ -15,7 +15,6 @@
 #include <bcm2835.h> 
 #include <pigpio.h>
 
-
 #define RELAY1 0xfe
 #define RELAY2 0xfb
 #define RELAY3 0xfd
@@ -95,7 +94,6 @@ int select_relay(int relay){
     return RELAYOFF;
 }
 
-
 void relay_control(bool state, int relay){
     char buf[2];
     int control = select_relay(relay);
@@ -111,43 +109,104 @@ void relay_control(bool state, int relay){
     bcm2835_i2c_write(buf,2);
 }
 
+/* direction 1 is send out, direction 2 is send in */
 void hb_control(int direction){
     if(direction == 1){ //send in
-	relay_control(2,1);
-	relay_control(3,1);
-	relay_control(4,0);
-	relay_control(1,0);
+	relay_control(1,2);
+	relay_control(1,3);
+	relay_control(0,4);
+	relay_control(0,1);
     }
     else if(direction == 2){ // send out
-	relay_control(2,0);
-	relay_control(3,0);
-	relay_control(4,1);
+	relay_control(0,2);
+	relay_control(0,3);
+	relay_control(1,4);
 	relay_control(1,1);
     }
     else{
-	relay_control(1,0);
-	relay_control(2,0);
-	relay_control(3,0);
-	relay_control(4,0);
+	relay_control(0,1);
+	relay_control(0,2);
+	relay_control(0,3);
+	relay_control(0,4);
     }
 }
 
-void act_control(int active_act, int direction){
-    //gpioWrite(18, 1); /* on */
-    if(direction == 1){
-	relay_control(1,1);
+void select_act(int actuator){
+    if (actuator == 0){
+	gpioWrite(relaycus1, 0);
+	gpioWrite(relaycus2, 0);
+	gpioWrite(relaycus3, 0);
+	gpioWrite(relaycus4, 0);
     }
-    else if(direction == 2){
-		
-		
+    else if (actuator == 1){
+	gpioWrite(relaycus1, 1);
+	gpioWrite(relaycus2, 0);
+	gpioWrite(relaycus3, 0);
+	gpioWrite(relaycus4, 0);
     }
-    else{
-	relay_control(0, 1);
-	relay_control(0, 2);
-	relay_control(0, 3);
-	relay_control(0, 4);
+    else if (actuator == 2){
+	gpioWrite(relaycus1, 0);
+	gpioWrite(relaycus2, 1);
+	gpioWrite(relaycus3, 0);
+	gpioWrite(relaycus4, 0);
+    }
+    else if (actuator == 3){
+	gpioWrite(relaycus1, 0);
+	gpioWrite(relaycus2, 0);
+	gpioWrite(relaycus3, 1);
+	gpioWrite(relaycus4, 0);
+    }
+    else if (actuator == 4){
+	gpioWrite(relaycus1, 0);
+	gpioWrite(relaycus2, 0);
+	gpioWrite(relaycus3, 0);
+	gpioWrite(relaycus4, 1);
     }
 }
+
+void act_control(int state){
+    if(state == 0){
+	hb_control(0);
+	select_act(0);
+    }
+    else if (state == 1){ //actuator one out
+	hb_control(1);
+	select_act(1);
+    }
+    else if (state == 2){ //actuator one in
+	hb_control(2);
+	select_act(1);
+    }
+    else if (state == 3){ //actuator two out
+	hb_control(1);
+	select_act(2);
+    }
+    else if (state == 4){ //actuator two in
+	hb_control(2);
+	select_act(2);
+    }
+    else if (state == 5){ //actuator three out
+	hb_control(1);
+	select_act(3);
+    }
+    else if (state == 6){ //actuator three in
+	hb_control(2);
+	select_act(3);
+    }
+    else if (state == 6){ //actuator four out
+	hb_control(1);
+	select_act(4);
+    }
+    else if (state == 6){ //actuator four in
+	hb_control(2);
+	select_act(4);
+    }
+    else{
+	hb_control(0);
+	select_act(0);
+    }
+}
+
 int stateupdate(int state, inputmicroswitches micro){
     if (state == 0){ // just turned on/restarted, act 1 must be in
 	if (micro.micro1in == 1){
@@ -223,6 +282,7 @@ int stateupdate(int state, inputmicroswitches micro){
     }
     return state;
 }
+
 inputmicroswitches updatemicro(inputmicroswitches micro){
     micro.micro1in = gpioRead(mirco1inpin);
     micro.micro1out = gpioRead(mirco1outpin);
@@ -234,7 +294,6 @@ inputmicroswitches updatemicro(inputmicroswitches micro){
     micro.micro4out = gpioRead(mirco4outpin);
     return micro;
 }
-
 
 int main(int argc, char **argv)  {  
     init();
@@ -248,7 +307,7 @@ int main(int argc, char **argv)  {
 	micro = updatemicro(micro);
 	state = stateupdate(state, micro);
 	    
-	act_control(active_act, direction);
+	act_control(state);
 		
 	relay_control(1,count);
 	delay(500);
