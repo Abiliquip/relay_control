@@ -27,9 +27,29 @@
 #define relaycus3 18
 #define relaycus4 22
 
+#define mirco1inpin 29
+#define mirco1outpin 31
+#define mirco2inpin 33
+#define mirco2outpin 35
+#define mirco3inpin 32
+#define mirco3outpin 36
+#define mirco4inpin 38
+#define mirco4outpin 40
+
+struct inputmicroswitches{
+    int micro1in = 0;
+    int micro2in = 0;
+    int micro3in = 0;
+    int micro4in = 0;
+    int micro1out = 0;
+    int micro2out = 0;
+    int micro3out = 0;
+    int micro4out = 0;
+}
+
 void init(void){
-	//i2c init
-	bcm2835_init();
+    //i2c init
+    bcm2835_init();
     bcm2835_i2c_begin();                //Start I2C operations.
     bcm2835_i2c_setSlaveAddress(0x20);  //I2C address
     bcm2835_i2c_set_baudrate(10000);    //1M baudrate
@@ -46,14 +66,16 @@ void init(void){
    gpioSetMode(relaycus2, PI_OUTPUT);
    gpioSetMode(relaycus3, PI_OUTPUT);
    gpioSetMode(relaycus4, PI_OUTPUT);	
+   //   gpioSetMode(23, PI_INPUT);
+
 }
 
 void deinit(void){
-	//deinit
-	bcm2835_i2c_end();  
+    //deinit
+    bcm2835_i2c_end();  
     bcm2835_close();  
     
-	/* Stop DMA, release resources */
+    /* Stop DMA, release resources */
     gpioTerminate();
 }
 
@@ -91,22 +113,23 @@ void relay_control(bool state, int relay){
 
 void position_feedback(){}
 void act_control(int active_act, int direction){
-	if(direction == 1){
-		relay_control(1,1);
+    //gpioWrite(18, 1); /* on */
+    if(direction == 1){
+	relay_control(1,1);
 		
-	}
-	else if(direction == 2){
+    }
+    else if(direction == 2){
 		
 		
-	}
-	else{
-		relay_control(0, 1);
-		relay_control(0, 2);
-		relay_control(0, 3);
-		relay_control(0, 4);
-	}
+    }
+    else{
+	relay_control(0, 1);
+	relay_control(0, 2);
+	relay_control(0, 3);
+	relay_control(0, 4);
+    }
 }
-int stateupdate(int state){
+int stateupdate(int state, inputmicroswitches micro){
     if (state == 0){ // just turned on/restarted, act 1 must be in
 	if (mirco1in == 1){
 	    return 1;
@@ -179,8 +202,11 @@ int stateupdate(int state){
 	    return 8;
 	}
     }
-    
     return state;
+}
+inputmicroswitches updatemicro(inputmicroswitches micro){
+    gpioRead(23)
+    
 }
 
 
@@ -191,8 +217,10 @@ int main(int argc, char **argv)  {
     int active_act = 1;
     int direction = 0;
     int state = 0;
+    struct inputmicroswitches micro;
     while(1){
-	state = stateupdate(state);
+	micro = updatemicro(micro);
+	state = stateupdate(state, micro);
 	    
 	position_feedback();
 	act_control(active_act, direction);
