@@ -4,7 +4,7 @@ HEADER	=
 OUT	= opt
 CC	 = gcc
 FLAGS	 = -g -c -Wall 
-LFLAGS	 = -lbcm2835
+LFLAGS	 = -lbcm2835 -lpigpio -lrt -lpthread
 
 all: $(OBJS)
 	$(CC) -g $(OBJS) -o $(OUT) $(LFLAGS)
