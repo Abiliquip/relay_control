@@ -29,8 +29,8 @@
 #define relaycus4 22
 
 /* GPIO used for microswitches */
-#define mirco1inpin 29
-#define mirco1outpin 31
+#define mirco1inpin 13
+#define mirco1outpin 15
 #define mirco2inpin 33
 #define mirco2outpin 35
 #define mirco3inpin 32
@@ -40,18 +40,31 @@
 
 /* A structure to hold the micro switch data */
 struct inputmicroswitches{
-    int micro1in = 0;
-    int micro2in = 0;
-    int micro3in = 0;
-    int micro4in = 0;
-    int micro1out = 0;
-    int micro2out = 0;
-    int micro3out = 0;
-    int micro4out = 0;
+    int micro1in;
+    int micro2in;
+    int micro3in;
+    int micro4in;
+    int micro1out;
+    int micro2out;
+    int micro3out;
+    int micro4out;
+};
+
+struct inputmicroswitches initmicrostrut(void){
+    struct inputmicroswitches micro;
+    micro.micro1in = 0;
+    micro.micro2in = 0;
+    micro.micro3in = 0;
+    micro.micro4in = 0;
+    micro.micro1out = 0;
+    micro.micro2out = 0;
+    micro.micro3out = 0;
+    micro.micro4out = 0;
+    return micro;
 }
 
 /*  Initializeation function - Run at start of main */
-void init(void){
+int init(void){
     //i2c init
     bcm2835_init();
     bcm2835_i2c_begin();                //Start I2C operations.
@@ -71,6 +84,7 @@ void init(void){
     gpioSetMode(relaycus3, PI_OUTPUT);
     gpioSetMode(relaycus4, PI_OUTPUT);	
     //gpioSetMode(23, PI_INPUT);
+    return 0;
 }
 
 /* run at the end of main loop */
@@ -218,7 +232,7 @@ void act_control(int state){
 }
 
 /* Takes micro switch data and previous state to deturmine the next state */
-int stateupdate(int state, inputmicroswitches micro){
+int stateupdate(int state, struct inputmicroswitches micro){
     if (state == 0){ // just turned on/restarted, act 1 must be in
 	if (micro.micro1in == 1){
 	    return 1;
@@ -228,7 +242,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 1){ // act 1 moved out
-	if (micro.mirco1out == 1){
+	if (micro.micro1out == 1){
 	    return 2;
 	}
 	else{
@@ -236,7 +250,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 2){ // act 1 finished, at in position
-	if (micro.mirco1in == 1){
+	if (micro.micro1in == 1){
 	    return 3;
 	}
 	else{
@@ -244,7 +258,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 3){ // act 2 starting
-	if (micro.mirco2out == 1){
+	if (micro.micro2out == 1){
 	    return 4;
 	}
 	else{
@@ -252,7 +266,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 4){ // act 2 finished, at in position
-	if (micro.mirco2in == 1){
+	if (micro.micro2in == 1){
 	    return 5;
 	}
 	else{
@@ -260,7 +274,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 5){ // act 3 starting
-	if (micro.mirco3out == 1){
+	if (micro.micro3out == 1){
 	    return 6;
 	}
 	else{
@@ -268,7 +282,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 6){ // act 3 finished, at in position
-	if (micro.mirco3in == 1){
+	if (micro.micro3in == 1){
 	    return 7;
 	}
 	else{
@@ -276,7 +290,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 7){ // act 4 starting
-	if (micro.mirco4out == 1){
+	if (micro.micro4out == 1){
 	    return 8;
 	}
 	else{
@@ -284,7 +298,7 @@ int stateupdate(int state, inputmicroswitches micro){
 	}
     }
     else if (state == 8){ // act 3 finished, at in position
-	if (micro.mirco4in == 1){
+	if (micro.micro4in == 1){
 	    return 0;
 	}
 	else{
@@ -295,7 +309,7 @@ int stateupdate(int state, inputmicroswitches micro){
 }
 
 /* Read the micro switch gpio */
-inputmicroswitches updatemicro(inputmicroswitches micro){
+struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
     micro.micro1in = gpioRead(mirco1inpin);
     micro.micro1out = gpioRead(mirco1outpin);
     micro.micro2in = gpioRead(mirco2inpin);
@@ -312,12 +326,14 @@ int main(int argc, char **argv)  {
     init();
     int state = 0;
     struct inputmicroswitches micro;
+    micro = initmicrostrut();
     
     while(1){
-	micro = updatemicro(micro);
+	//micro = updatemicro(micro);
 	state = stateupdate(state, micro);
-	    
-	act_control(state);
+	printf("micro in = %d, micro out = %d \n", micro.micro1in, micro.micro1out);
+	delay(500);
+	//act_control(state);
 		
     }    
     
