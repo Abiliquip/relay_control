@@ -12,20 +12,23 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include <bcm2835.h> 
-#include <pigpio.h>
+#include <bcm2835.h>  // i2c board
+#include <pigpio.h> // when using pi gpio
 
+/* i2c relay board addresses */
 #define RELAY1 0xfe
 #define RELAY2 0xfb
 #define RELAY3 0xfd
 #define RELAY4 0xf7
 #define RELAYOFF 0xff
 
+/* Relays for controling which actuator is used */
 #define relaycus1 12
 #define relaycus2 16
 #define relaycus3 18
 #define relaycus4 22
 
+/* GPIO used for microswitches */
 #define mirco1inpin 29
 #define mirco1outpin 31
 #define mirco2inpin 33
@@ -35,6 +38,7 @@
 #define mirco4inpin 38
 #define mirco4outpin 40
 
+/* A structure to hold the micro switch data */
 struct inputmicroswitches{
     int micro1in = 0;
     int micro2in = 0;
@@ -46,6 +50,7 @@ struct inputmicroswitches{
     int micro4out = 0;
 }
 
+/*  Initializeation function - Run at start of main */
 void init(void){
     //i2c init
     bcm2835_init();
@@ -54,21 +59,21 @@ void init(void){
     bcm2835_i2c_set_baudrate(10000);    //1M baudrate
     
     //gpio init
-    if (gpioInitialise() < 0)
-   {
-      fprintf(stderr, "pigpio initialisation failed\n");
-      return 1;
-   }
+    if (gpioInitialise() < 0){
+	fprintf(stderr, "pigpio initialisation failed\n");
+	return 1;
+    }
 
-   /* Set GPIO modes */
-   gpioSetMode(relaycus1, PI_OUTPUT);
-   gpioSetMode(relaycus2, PI_OUTPUT);
-   gpioSetMode(relaycus3, PI_OUTPUT);
-   gpioSetMode(relaycus4, PI_OUTPUT);	
-   //gpioSetMode(23, PI_INPUT);
-
+    /* Set GPIO modes 
+    * These are for selecting a singal actuator */
+    gpioSetMode(relaycus1, PI_OUTPUT);
+    gpioSetMode(relaycus2, PI_OUTPUT);
+    gpioSetMode(relaycus3, PI_OUTPUT);
+    gpioSetMode(relaycus4, PI_OUTPUT);	
+    //gpioSetMode(23, PI_INPUT);
 }
 
+/* run at the end of main loop */
 void deinit(void){
     //deinit
     bcm2835_i2c_end();  
@@ -78,6 +83,7 @@ void deinit(void){
     gpioTerminate();
 }
 
+/* Selects which relay to use from the i2c board */
 int select_relay(int relay){
     if (relay == 1){
 	return RELAY1;
@@ -94,6 +100,7 @@ int select_relay(int relay){
     return RELAYOFF;
 }
 
+/* Once the relay has been selected, this function arranges and sends the data to the i2c relay board */
 void relay_control(bool state, int relay){
     char buf[2];
     int control = select_relay(relay);
@@ -109,7 +116,8 @@ void relay_control(bool state, int relay){
     bcm2835_i2c_write(buf,2);
 }
 
-/* direction 1 is send out, direction 2 is send in */
+/* direction 1 is send out, direction 2 is send in 
+ * Function to control the sequense of the H bridge, Uses the i2c board as relays*/
 void hb_control(int direction){
     if(direction == 1){ //send in
 	relay_control(1,2);
@@ -131,6 +139,7 @@ void hb_control(int direction){
     }
 }
 
+/* This function selects the actuator to run */
 void select_act(int actuator){
     if (actuator == 0){
 	gpioWrite(relaycus1, 0);
@@ -164,6 +173,7 @@ void select_act(int actuator){
     }
 }
 
+/* Takes in state data and decideds what to do or not do */
 void act_control(int state){
     if(state == 0){
 	hb_control(0);
@@ -207,6 +217,7 @@ void act_control(int state){
     }
 }
 
+/* Takes micro switch data and previous state to deturmine the next state */
 int stateupdate(int state, inputmicroswitches micro){
     if (state == 0){ // just turned on/restarted, act 1 must be in
 	if (micro.micro1in == 1){
@@ -283,6 +294,7 @@ int stateupdate(int state, inputmicroswitches micro){
     return state;
 }
 
+/* Read the micro switch gpio */
 inputmicroswitches updatemicro(inputmicroswitches micro){
     micro.micro1in = gpioRead(mirco1inpin);
     micro.micro1out = gpioRead(mirco1outpin);
@@ -296,29 +308,21 @@ inputmicroswitches updatemicro(inputmicroswitches micro){
 }
 
 int main(int argc, char **argv)  {  
+    
     init();
-
-    int count = 0;
-    int active_act = 1;
-    int direction = 0;
     int state = 0;
     struct inputmicroswitches micro;
+    
     while(1){
 	micro = updatemicro(micro);
 	state = stateupdate(state, micro);
 	    
 	act_control(state);
 		
-	relay_control(1,count);
-	delay(500);
-	relay_control(0,count);
-	delay(500);
-		
-	if (count == 4){
-		count = 0;
-	}
-	count++;
     }    
+    
+    
+    
     deinit();
     return 0;  
 } 
