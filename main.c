@@ -215,16 +215,16 @@ void act_control(int state){
 }
 
 /* Takes micro switch data and previous state to deturmine the next state */
-int stateupdate(int state, struct inputmicroswitches micro){
-    if (state == 0){ // just turned on/restarted, act 1 must be in
-	if (micro.micro1in == 1){
+int stateupdate(int previous_state, struct inputmicroswitches micro){
+    if (previous_state == 0){ // just turned on/restarted, act 1 must be in
+	if (micro.micro1in == 0){ // 0 is fully in
 	    return 1;
 	}
 	else{
 	    return 0;
 	}
     }
-    else if (state == 1){ // act 1 moved out
+    else if (previous_state == 1){ // act 1 moved out
 	if (micro.micro1out == 1){
 	    return 2;
 	}
@@ -232,15 +232,15 @@ int stateupdate(int state, struct inputmicroswitches micro){
 	    return 1;
 	}
     }
-    else if (state == 2){ // act 1 finished, at in position
-	if (micro.micro1in == 1){
+    else if (previous_state == 2){ // act 1 finished, at in position
+	if (micro.micro1in == 0){
 	    return 3;
 	}
 	else{
 	    return 2;
 	}
     }
-    else if (state == 3){ // act 2 starting
+    else if (previous_state == 3){ // act 2 starting
 	if (micro.micro2out == 1){
 	    return 4;
 	}
@@ -248,15 +248,15 @@ int stateupdate(int state, struct inputmicroswitches micro){
 	    return 3;
 	}
     }
-    else if (state == 4){ // act 2 finished, at in position
-	if (micro.micro2in == 1){
+    else if (previous_state == 4){ // act 2 finished, at in position
+	if (micro.micro2in == 0){
 	    return 5;
 	}
 	else{
 	    return 4;
 	}
     }
-    else if (state == 5){ // act 3 starting
+    else if (previous_state == 5){ // act 3 starting
 	if (micro.micro3out == 1){
 	    return 6;
 	}
@@ -264,15 +264,15 @@ int stateupdate(int state, struct inputmicroswitches micro){
 	    return 5;
 	}
     }
-    else if (state == 6){ // act 3 finished, at in position
-	if (micro.micro3in == 1){
+    else if (previous_state == 6){ // act 3 finished, at in position
+	if (micro.micro3in == 0){
 	    return 7;
 	}
 	else{
 	    return 6;
 	}
     }
-    else if (state == 7){ // act 4 starting
+    else if (previous_state == 7){ // act 4 starting
 	if (micro.micro4out == 1){
 	    return 8;
 	}
@@ -280,15 +280,15 @@ int stateupdate(int state, struct inputmicroswitches micro){
 	    return 7;
 	}
     }
-    else if (state == 8){ // act 3 finished, at in position
-	if (micro.micro4in == 1){
+    else if (previous_state == 8){ // act 3 finished, at in position
+	if (micro.micro4in == 0){
 	    return 0;
 	}
 	else{
 	    return 8;
 	}
     }
-    return state;
+    return previous_state;
 }
 
 /* Read the micro switch gpio */
@@ -322,10 +322,11 @@ int main(int argc, char **argv)  {
 	    i = 0;
 	}
 	i++;*/
+	delay(500);
 	state = stateupdate(state, micro);
 	printf("state = %d\n", state);
-	act_control(state);
-	//printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
+	//act_control(state);
+	printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
 	/*delay(3000);
 	hb_control(2);
 	printf("2\n");
