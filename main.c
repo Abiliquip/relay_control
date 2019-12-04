@@ -16,7 +16,7 @@
 #include <pigpio.h> // when using pi gpio
 
 /* i2c relay board addresses */
-#define RELAY1 0xfe
+#define RELAY1 0xfe // relay off only used
 #define RELAY2 0xfb
 #define RELAY3 0xfd
 #define RELAY4 0xf7
@@ -24,9 +24,9 @@
 
 /* Relays for controling which actuator is used */
 #define relaycus1 4
-#define relaycus2 11
-#define relaycus3 13
-#define relaycus4 14
+#define relaycus2 17
+#define relaycus3 27
+#define relaycus4 22
 
 /* GPIO used for microswitches */
 #define mirco1inpin 10
@@ -115,60 +115,25 @@ void deinit(void){
     gpioTerminate();
 }
 
-/* Selects which relay to use from the i2c board */
-int select_relay(int relay){
-    if (relay == 1){
-	return RELAY1;
-    }
-    else if (relay == 2){
-	return RELAY2;
-    }
-    else if (relay == 3){
-	return RELAY3;
-    }
-    else if (relay == 4){
-	return RELAY4;
-    }
-    return RELAYOFF;
-}
-
-/* Once the relay has been selected, this function arranges and sends the data to the i2c relay board */
-void relay_control(bool state, int relay){
-    char buf[2];
-    int control = select_relay(relay);
-	
-    if (state == 1){
-	buf[0] = 0x06;		//Address
-        buf[1] = control;	//DATA
-    }
-    else if (state == 0){
-	buf[0] = 0x06;     
-	buf[1] = RELAYOFF; //OFF
-    }
-    bcm2835_i2c_write(buf,2);
-}
 
 /* direction 1 is send out, direction 2 is send in 
  * Function to control the sequense of the H bridge, Uses the i2c board as relays*/
 void hb_control(int direction){
+    char buf[2];
+    //int control = select_relay(relay);
+    buf[0] = 0x06; 
+    
     if(direction == 1){ //send in
-	relay_control(1,2);
-	relay_control(1,3);
-	relay_control(0,4);
-	relay_control(0,1);
+        buf[1] = 0xF9;		//DATA
+	
     }
     else if(direction == 2){ // send out
-	relay_control(0,2);
-	relay_control(0,3);
-	relay_control(1,4);
-	relay_control(1,1);
+        buf[1] = 0xF6;		//DATA
     }
     else{
-	relay_control(0,1);
-	relay_control(0,2);
-	relay_control(0,3);
-	relay_control(0,4);
+	buf[1] = RELAYOFF; //OFF
     }
+    bcm2835_i2c_write(buf,2);
 }
 
 /* This function selects the actuator to run */
@@ -348,12 +313,14 @@ int main(int argc, char **argv)  {
     
     while(1){
 	micro = updatemicro(micro);
+	select_act(1);
 	//state = stateupdate(state, micro);
 	//printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
-	delay(500);
-	select_act(0);
-	delay(500);
-	select_act(1);
+	delay(3000);
+	hb_control(1);
+	delay(3000);
+	hb_control(2);
+	
 	//act_control(state);
 		
     }    
