@@ -349,7 +349,7 @@ int main(int argc, char **argv)  {
     while(1){
 	micro = updatemicro(micro);
 	//state = stateupdate(state, micro);
-	printf("micro in = %d, micro out = %d \n", micro.micro1in, micro.micro1out);
+	printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
 	delay(500);
 	//act_control(state);
 		
