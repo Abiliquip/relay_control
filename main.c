@@ -23,7 +23,7 @@
 #define RELAYOFF 0xff
 
 /* Relays for controling which actuator is used */
-#define relaycus1 7
+#define relaycus1 4
 #define relaycus2 11
 #define relaycus3 13
 #define relaycus4 14
@@ -349,8 +349,11 @@ int main(int argc, char **argv)  {
     while(1){
 	micro = updatemicro(micro);
 	//state = stateupdate(state, micro);
-	printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
+	//printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
 	delay(500);
+	select_act(0);
+	delay(500);
+	select_act(1);
 	//act_control(state);
 		
     }    
