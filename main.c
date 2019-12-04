@@ -38,6 +38,9 @@
 #define mirco4inpin 23
 #define mirco4outpin 24
 
+/*  GPIO used for extenral switches */
+#define estop 25
+
 /* A structure to hold the micro switch data */
 struct inputmicroswitches{
     int micro1in;
@@ -123,12 +126,11 @@ void hb_control(int direction){
     //int control = select_relay(relay);
     buf[0] = 0x06; 
     
-    if(direction == 1){ //send in
-        buf[1] = 0xF9;		//DATA
-	
-    }
-    else if(direction == 2){ // send out
+    if(direction == 1){ //send out
         buf[1] = 0xF6;		//DATA
+    }
+    else if(direction == 2){ // send in
+        buf[1] = 0xF9;		//DATA
     }
     else{
 	buf[1] = RELAYOFF; //OFF
@@ -200,11 +202,11 @@ void act_control(int state){
 	hb_control(2);
 	select_act(3);
     }
-    else if (state == 6){ //actuator four out
+    else if (state == 7){ //actuator four out
 	hb_control(1);
 	select_act(4);
     }
-    else if (state == 6){ //actuator four in
+    else if (state == 8){ //actuator four in
 	hb_control(2);
 	select_act(4);
     }
@@ -322,10 +324,10 @@ int main(int argc, char **argv)  {
 	    i = 0;
 	}
 	i++;*/
-	delay(500);
+	delay(100);
 	state = stateupdate(state, micro);
 	printf("state = %d\n", state);
-	//act_control(state);
+	act_control(state);
 	printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
 	/*delay(3000);
 	hb_control(2);
