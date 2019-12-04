@@ -23,20 +23,20 @@
 #define RELAYOFF 0xff
 
 /* Relays for controling which actuator is used */
-#define relaycus1 12
-#define relaycus2 16
-#define relaycus3 18
-#define relaycus4 22
+#define relaycus1 7
+#define relaycus2 11
+#define relaycus3 13
+#define relaycus4 14
 
 /* GPIO used for microswitches */
-#define mirco1inpin 13
-#define mirco1outpin 15
-#define mirco2inpin 33
-#define mirco2outpin 35
-#define mirco3inpin 32
-#define mirco3outpin 36
-#define mirco4inpin 38
-#define mirco4outpin 40
+#define mirco1inpin 10
+#define mirco1outpin 9
+#define mirco2inpin 11
+#define mirco2outpin 14
+#define mirco3inpin 15
+#define mirco3outpin 18
+#define mirco4inpin 23
+#define mirco4outpin 24
 
 /* A structure to hold the micro switch data */
 struct inputmicroswitches{
@@ -83,7 +83,25 @@ int init(void){
     gpioSetMode(relaycus2, PI_OUTPUT);
     gpioSetMode(relaycus3, PI_OUTPUT);
     gpioSetMode(relaycus4, PI_OUTPUT);	
-    //gpioSetMode(23, PI_INPUT);
+    
+    /* GPIO micro switches */
+    gpioSetMode(mirco1inpin, PI_INPUT);
+    gpioSetMode(mirco1outpin, PI_INPUT);
+    gpioSetMode(mirco2inpin, PI_INPUT);
+    gpioSetMode(mirco2outpin, PI_INPUT);
+    gpioSetMode(mirco3inpin, PI_INPUT);
+    gpioSetMode(mirco3outpin, PI_INPUT);
+    gpioSetMode(mirco4inpin, PI_INPUT);
+    gpioSetMode(mirco4outpin, PI_INPUT);
+    
+    gpioSetPullUpDown(mirco1inpin, PI_PUD_UP);
+    gpioSetPullUpDown(mirco1outpin, PI_PUD_UP);
+    gpioSetPullUpDown(mirco2inpin, PI_PUD_UP);
+    gpioSetPullUpDown(mirco2outpin, PI_PUD_UP);
+    gpioSetPullUpDown(mirco3inpin, PI_PUD_UP);
+    gpioSetPullUpDown(mirco3outpin, PI_PUD_UP);
+    gpioSetPullUpDown(mirco4inpin, PI_PUD_UP);
+    gpioSetPullUpDown(mirco4outpin, PI_PUD_UP);
     return 0;
 }
 
@@ -324,13 +342,13 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
 int main(int argc, char **argv)  {  
     
     init();
-    int state = 0;
+    //int state = 0;
     struct inputmicroswitches micro;
     micro = initmicrostrut();
     
     while(1){
-	//micro = updatemicro(micro);
-	state = stateupdate(state, micro);
+	micro = updatemicro(micro);
+	//state = stateupdate(state, micro);
 	printf("micro in = %d, micro out = %d \n", micro.micro1in, micro.micro1out);
 	delay(500);
 	//act_control(state);
