@@ -307,19 +307,31 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
 int main(int argc, char **argv)  {  
     
     init();
-    //int state = 0;
+    int state = 0;
     struct inputmicroswitches micro;
     micro = initmicrostrut();
-    
+    //	int i = 0;
+    //select_act(1);
     while(1){
 	micro = updatemicro(micro);
-	select_act(1);
-	//state = stateupdate(state, micro);
+	/*select_act(i);
+	printf("%d\n", i);
+	delay(3000);
+	
+	if (i ==4){
+	    i = 0;
+	}
+	i++;*/
+	state = stateupdate(state, micro);
+	printf("state = %d\n", state);
+	act_control(state);
 	//printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
+	/*delay(3000);
+	hb_control(2);
+	printf("2\n");
 	delay(3000);
 	hb_control(1);
-	delay(3000);
-	hb_control(2);
+	printf("1\n");*/
 	
 	//act_control(state);
 		
