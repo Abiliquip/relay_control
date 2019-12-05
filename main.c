@@ -39,7 +39,7 @@
 #define mirco4outpin 24
 
 /*  GPIO used for extenral switches */
-#define estop 25
+#define estop_pin 25
 
 /* A structure to hold the micro switch data */
 struct inputmicroswitches{
@@ -96,7 +96,9 @@ int init(void){
     gpioSetMode(mirco3outpin, PI_INPUT);
     gpioSetMode(mirco4inpin, PI_INPUT);
     gpioSetMode(mirco4outpin, PI_INPUT);
+    gpioSetMode(estop_pin, PI_INPUT);
     
+    /* Set internal pull up resister */
     gpioSetPullUpDown(mirco1inpin, PI_PUD_UP);
     gpioSetPullUpDown(mirco1outpin, PI_PUD_UP);
     gpioSetPullUpDown(mirco2inpin, PI_PUD_UP);
@@ -105,6 +107,7 @@ int init(void){
     gpioSetPullUpDown(mirco3outpin, PI_PUD_UP);
     gpioSetPullUpDown(mirco4inpin, PI_PUD_UP);
     gpioSetPullUpDown(mirco4outpin, PI_PUD_UP);
+    gpioSetPullUpDown(estop_pin, PI_PUD_UP);
     return 0;
 }
 
@@ -117,7 +120,6 @@ void deinit(void){
     /* Stop DMA, release resources */
     gpioTerminate();
 }
-
 
 /* direction 1 is send out, direction 2 is send in 
  * Function to control the sequense of the H bridge, Uses the i2c board as relays*/
@@ -220,6 +222,7 @@ void act_control(int state){
 int stateupdate(int previous_state, struct inputmicroswitches micro){
     if (previous_state == 0){ // just turned on/restarted, act 1 must be in
 	if (micro.micro1in == 0){ // 0 is fully in
+	    delay(400);
 	    return 1;
 	}
 	else{
@@ -228,6 +231,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 1){ // act 1 moved out
 	if (micro.micro1out == 1){
+	    delay(400);
 	    return 2;
 	}
 	else{
@@ -236,6 +240,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 2){ // act 1 finished, at in position
 	if (micro.micro1in == 0){
+	    delay(400);
 	    return 3;
 	}
 	else{
@@ -244,6 +249,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 3){ // act 2 starting
 	if (micro.micro2out == 1){
+	    delay(400);
 	    return 4;
 	}
 	else{
@@ -252,6 +258,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 4){ // act 2 finished, at in position
 	if (micro.micro2in == 0){
+	    delay(200);
 	    return 5;
 	}
 	else{
@@ -260,6 +267,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 5){ // act 3 starting
 	if (micro.micro3out == 1){
+	    delay(400);
 	    return 6;
 	}
 	else{
@@ -268,6 +276,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 6){ // act 3 finished, at in position
 	if (micro.micro3in == 0){
+	    delay(400);
 	    return 7;
 	}
 	else{
@@ -276,6 +285,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 7){ // act 4 starting
 	if (micro.micro4out == 1){
+	    delay(400);
 	    return 8;
 	}
 	else{
@@ -284,6 +294,7 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 8){ // act 3 finished, at in position
 	if (micro.micro4in == 0){
+	    delay(1000);
 	    return 0;
 	}
 	else{
@@ -306,14 +317,27 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
     return micro;
 }
 
+void sendallhome(struct inputmicroswitches micro){
+    if (micro.micro1in == 1){
+	hb_control(2);
+	select_act(1);
+    }
+    else{
+	hb_control(0);
+	select_act(0);
+    }
+}
+
 int main(int argc, char **argv)  {  
     
     init();
     int state = 0;
     struct inputmicroswitches micro;
     micro = initmicrostrut();
+    int estop = 0;
     //	int i = 0;
     //select_act(1);
+    
     while(1){
 	micro = updatemicro(micro);
 	/*select_act(i);
@@ -327,17 +351,20 @@ int main(int argc, char **argv)  {
 	delay(100);
 	state = stateupdate(state, micro);
 	printf("state = %d\n", state);
-	act_control(state);
 	printf("%d%d%d%d%d%d%d%d\n", micro.micro1in, micro.micro1out, micro.micro2in, micro.micro2out, micro.micro3in, micro.micro3out, micro.micro4in, micro.micro4out);
-	/*delay(3000);
-	hb_control(2);
-	printf("2\n");
-	delay(3000);
-	hb_control(1);
-	printf("1\n");*/
 	
-	//act_control(state);
-		
+	//sendallhome(micro);
+	
+	estop = gpioRead(estop_pin) == 0;
+	if (estop == 0){
+	    hb_control(0);
+	    select_act(0);
+	    printf("estop engaded\n" );
+	}
+	else if (estop == 1){
+	    printf("alive\n");
+	    act_control(state);
+	}
     }    
     
     
