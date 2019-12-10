@@ -2,7 +2,7 @@
  * Will be using microswitches for feedback at this stage
  * Uses seeed 4 relay board
  * adc pi, abelectronics.co.uk for voltage readings
- * Havnt got current board yet
+ * Havnt got current board programed
  * 
  * Authour: Ryan Taylor
  * Date: 2/12/19
@@ -14,7 +14,6 @@
 #include <stdbool.h>
 #include <bcm2835.h>  // i2c board
 #include <pigpio.h> // when using pi gpio
-#include <string.h> //used for user input
 
 /* i2c relay board addresses */
 #define RELAY1 0xfe // relay off only used
@@ -43,8 +42,8 @@
 #define estop_pin 25
 
 /* delays for program */
-#define between_act_delay 600
-#define four_motor_duty_delay 3000
+#define BETWEEN_ACT_DELAY 500
+#define FOUR_MOTOR_DUTY_DELAY 3000
 
 /* Standard cycle testing constants */
 
@@ -63,6 +62,7 @@ struct inputmicroswitches{
     int micro4out;
 };
 
+/* Initail micro switch setting function */
 struct inputmicroswitches initmicrostrut(void){
     struct inputmicroswitches micro;
     micro.micro1in = 0;
@@ -184,6 +184,12 @@ void select_act(int actuator){
     }
 }
 
+/* Simple function to turn all actuators */
+void turn_all_off(void){
+    hb_control(0);
+    select_act(0);
+}
+
 /* Takes in state data and decideds what to do or not do */
 void act_control(int state){
     if(state == 0){
@@ -232,7 +238,6 @@ void act_control(int state){
 int stateupdate(int previous_state, struct inputmicroswitches micro){
     if (previous_state == 0){ // just turned on/restarted, act 1 must be in
 	if (micro.micro1in == 0){ // 0 is fully in
-	    delay(between_act_delay);
 	    return 1;
 	}
 	else{
@@ -241,7 +246,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 1){ // act 1 moved out
 	if (micro.micro1out == 1){
-	    delay(between_act_delay);
 	    return 2;
 	}
 	else{
@@ -250,7 +254,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 2){ // act 1 finished, at in position
 	if (micro.micro1in == 0){
-	    delay(between_act_delay);
 	    return 3;
 	}
 	else{
@@ -259,7 +262,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 3){ // act 2 starting
 	if (micro.micro2out == 1){
-	    delay(between_act_delay);
 	    return 4;
 	}
 	else{
@@ -268,7 +270,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 4){ // act 2 finished, at in position
 	if (micro.micro2in == 0){
-	    delay(between_act_delay);
 	    return 5;
 	}
 	else{
@@ -277,7 +278,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 5){ // act 3 starting
 	if (micro.micro3out == 1){
-	    delay(between_act_delay);
 	    return 6;
 	}
 	else{
@@ -286,7 +286,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 6){ // act 3 finished, at in position
 	if (micro.micro3in == 0){
-	    delay(between_act_delay);
 	    return 7;
 	}
 	else{
@@ -295,7 +294,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 7){ // act 4 starting
 	if (micro.micro4out == 1){
-	    delay(between_act_delay);
 	    return 8;
 	}
 	else{
@@ -304,7 +302,6 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
     }
     else if (previous_state == 8){ // act 3 finished, at in position
 	if (micro.micro4in == 0){
-	    delay(four_motor_duty_delay);
 	    return 0;
 	}
 	else{
@@ -312,6 +309,31 @@ int stateupdate(int previous_state, struct inputmicroswitches micro){
 	}
     }
     return previous_state;
+}
+
+/* Checks if the state has changed. Mainly used to add delay at the end of actuator stroke */
+bool check_state_change(int state, int previous_state){
+    if (previous_state != state){
+	printf("state change\n");
+	return 1;
+    }
+    else {
+	return 0;
+    }
+    return 0;
+}
+
+/* If state flag has changed then delay actuator
+ * Delay the last actuator to account for duty cycle of actuators */
+void state_change_delay(bool state_change, int state){
+    if (state_change == 1){
+	turn_all_off();
+	delay(BETWEEN_ACT_DELAY);
+    }
+    if (state_change == 1 && state == 0){
+	turn_all_off();
+	delay(FOUR_MOTOR_DUTY_DELAY);
+    }
 }
 
 /* Read the micro switch gpio */
@@ -327,69 +349,113 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
     return micro;
 }
 
-void sendallhome(struct inputmicroswitches micro){
+/* Function to get all the actuators in the in position */
+int sendallhome(struct inputmicroswitches micro){
     if (micro.micro1in == 1){
 	hb_control(2);
 	select_act(1);
     }
-    else{
-	hb_control(0);
-	select_act(0);
+    else if (micro.micro2in == 1){
+	hb_control(2);
+	select_act(2);
     }
+    else if (micro.micro3in == 1){
+	hb_control(2);
+	select_act(3);
+    }
+    else if (micro.micro4in == 1){
+	hb_control(2);
+	select_act(4);
+    }
+    else{
+	turn_all_off();
+    }
+    if (micro.micro1in == 1 && micro.micro2in == 1 && micro.micro3in == 1 && micro.micro4in == 1){
+	return 0;
+    }
+    return 1;
 }
 
+/* Used to start out program. Prints program option */
 int select_mode(void){
     int mode = 0;
-    char confermation[3];
+    int confermation = 0;
 
     printf("\n");
     printf("Please select mode\n");
     printf("Mode 1: Return actuators home \n");
-    printf("Mode 2: Standard four actuator cycle, %d times, %d% capacity, standard duty\n", STD_CYCLES, STD_PERCENTAGE);
+    printf("Mode 2: Standard four actuator cycle, %d times, %d%% capacity, standard duty\n", STD_CYCLES, STD_PERCENTAGE);
     printf("Mode 3: Actuator 1 repeats, standard duty\n");
-    while(1){
+    while(confermation == 0){
 	printf("Enter single digit\n\n");
 	scanf("%d", &mode);
-	printf("Was your number %d? Enter Y/n\n", mode);
-	scanf("%s\n", confermation);
-	if (strcmp(confermation, "Y" == 0){
-	    break;
-	}
+	printf("Was your number %d? \nEnter 1 for yes, 0 for no\n", mode);
+	scanf("%d", &confermation);
     }
-    
+    printf("mode = %d\n", mode);
     return mode;
 }
 
+/*  */
+int check_all_home(int mode, struct inputmicroswitches micro){
+    int home = 0;
+    
+    if (mode == 2 || mode == 3){
+	if (micro.micro1in == 1 || micro.micro2in == 1 || micro.micro3in == 1 || micro.micro4in == 1){
+	    while (home == 0){
+		printf("\nAn actuator is not home\n"); 
+		printf("Would you like to start homing process?\n");
+		printf("Enter 1 for yes, 0 for no\n");
+		scanf("%d", &home);
+		if (home == 0){
+		    return 0;
+		}
+	    }
+	}
+    }
+    if (home == 1){
+	printf("Moved to mode %d\n", 1);
+    }
+    return 1;
+}
+
+/* Main loop :) */
 int main(int argc, char **argv)  {  
     
     init();
     int state = 0;
+    bool state_change = 0;
+    int old_state = 0;
     struct inputmicroswitches micro;
     micro = initmicrostrut();
+    micro = updatemicro(micro);
     int mode = select_mode();
+    mode = check_all_home(mode, micro);
     int estop = 0;
-    //select_act(1);
     
-    while(1){
+    while(mode != 0){
+	delay(200);
 	micro = updatemicro(micro);
-	delay(100);
+	old_state = state;
 	state = stateupdate(state, micro);
-		
+	state_change = check_state_change(state, old_state);
+	printf("mode = %d\n",mode);
 	estop = gpioRead(estop_pin);
 	if (estop == 1){
-	    hb_control(0);
-	    select_act(0);
+	    turn_all_off();
 	    printf("estop engaded\n" );
 	}
 	else if (estop == 0){
-	    if( mode == 1){ //send actuators home
-		sendallhome(micro);
+	    
+	    if (mode == 1){ //send actuators home
+		mode = sendallhome(micro);
 	    }
-	    else if (mode == 2){
+	    if (mode == 2){
 		act_control(state);
+		state_change_delay(state_change, state);
 	    }
-	    else if (mode == 3){
-		
+	    if (mode == 3){
+		turn_all_off();
 	    }
 	    
 	}
