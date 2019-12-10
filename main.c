@@ -352,25 +352,30 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
 /* Function to get all the actuators in the in position */
 int sendallhome(struct inputmicroswitches micro){
     if (micro.micro1in == 1){
+	printf("Sending actuator 1 home\n");
 	hb_control(2);
 	select_act(1);
     }
     else if (micro.micro2in == 1){
+	printf("Sending actuator 2 home\n");
 	hb_control(2);
 	select_act(2);
     }
     else if (micro.micro3in == 1){
+	printf("Sending actuator 3 home\n");
 	hb_control(2);
 	select_act(3);
     }
     else if (micro.micro4in == 1){
+	printf("Sending actuator 4 home\n");
 	hb_control(2);
 	select_act(4);
     }
     else{
 	turn_all_off();
     }
-    if (micro.micro1in == 1 && micro.micro2in == 1 && micro.micro3in == 1 && micro.micro4in == 1){
+    if (micro.micro1in == 0 && micro.micro2in == 0 && micro.micro3in == 0 && micro.micro4in == 0){
+	printf("\nAll actuators are home\nEnding program\n\n");
 	return 0;
     }
     return 1;
@@ -396,14 +401,15 @@ int select_mode(void){
     return mode;
 }
 
-/*  */
+/* Function that will run at the start of the program to check if all the actuators are fully in
+ * Ends the program after finishing */
 int check_all_home(int mode, struct inputmicroswitches micro){
     int home = 0;
     
     if (mode == 2 || mode == 3){
 	if (micro.micro1in == 1 || micro.micro2in == 1 || micro.micro3in == 1 || micro.micro4in == 1){
 	    while (home == 0){
-		printf("\nAn actuator is not home\n"); 
+		printf("\nAn actuator is not home, All actuators need to be home to start\n"); 
 		printf("Would you like to start homing process?\n");
 		printf("Enter 1 for yes, 0 for no\n");
 		scanf("%d", &home);
@@ -415,8 +421,18 @@ int check_all_home(int mode, struct inputmicroswitches micro){
     }
     if (home == 1){
 	printf("Moved to mode %d\n", 1);
+	return 1;
     }
-    return 1;
+    return mode;
+}
+
+/* Displays the count of the cycling test. It will display at the end of the cycle */
+int count_display(int count, int state, bool state_change){
+    if(state_change == 1 && state == 0){
+	count = count + 1;
+	printf("Count for all four actuators is %d\n", count);
+    }
+    return count;
 }
 
 /* Main loop :) */
@@ -432,6 +448,7 @@ int main(int argc, char **argv)  {
     int mode = select_mode();
     mode = check_all_home(mode, micro);
     int estop = 0;
+    int count = 0;
     
     while(mode != 0){
 	delay(200);
@@ -439,7 +456,6 @@ int main(int argc, char **argv)  {
 	old_state = state;
 	state = stateupdate(state, micro);
 	state_change = check_state_change(state, old_state);
-	printf("mode = %d\n",mode);
 	estop = gpioRead(estop_pin);
 	if (estop == 1){
 	    turn_all_off();
@@ -452,6 +468,7 @@ int main(int argc, char **argv)  {
 	    }
 	    if (mode == 2){
 		act_control(state);
+		count = count_display(count, state, state_change);
 		state_change_delay(state_change, state);
 	    }
 	    if (mode == 3){
