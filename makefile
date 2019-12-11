@@ -1,6 +1,6 @@
-OBJS	= main.o ABE_ADCPi.o
-SOURCE	= main.c ABE_ADCPi.c
-HEADER	= ABE_ADCPi.h
+OBJS	= main.o ABE_ADCPi.o init.o control.o actuator_control.o
+SOURCE	= main.c ABE_ADCPi.c init.c control.c
+HEADER	= ABE_ADCPi.h init.h control.h
 OUT	= opt
 CC	 = gcc
 FLAGS	 = -g -c -Wall
