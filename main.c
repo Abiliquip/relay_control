@@ -14,6 +14,11 @@
 #include <stdbool.h>
 #include <bcm2835.h>  // i2c board
 #include <pigpio.h> // when using pi gpio
+#include "ABE_ADCPi.h"
+#include <unistd.h>				//Needed for I2C port
+#include <fcntl.h>				//Needed for I2C port
+#include <sys/ioctl.h>			//Needed for I2C port
+#include <linux/i2c-dev.h>		//Needed for I2C port
 
 /* i2c relay board addresses */
 #define RELAY1 0xfe // relay off only used
@@ -79,10 +84,10 @@ struct inputmicroswitches initmicrostrut(void){
 /*  Initializeation function - Run at start of main */
 int init(void){
     //i2c init
-    bcm2835_init();
-    bcm2835_i2c_begin();                //Start I2C operations.
-    bcm2835_i2c_setSlaveAddress(0x20);  //I2C address
-    bcm2835_i2c_set_baudrate(10000);    //1M baudrate
+    //bcm2835_init();
+    //bcm2835_i2c_begin();                //Start I2C operations.
+    //bcm2835_i2c_setSlaveAddress(0x20);  //I2C address
+    //bcm2835_i2c_set_baudrate(10000);    //1M baudrate
     
     //gpio init
     if (gpioInitialise() < 0){
@@ -124,30 +129,72 @@ int init(void){
 /* run at the end of main loop */
 void deinit(void){
     //deinit
-    bcm2835_i2c_end();  
-    bcm2835_close();  
+    //bcm2835_i2c_end();  
+    //bcm2835_close();  
     
     /* Stop DMA, release resources */
     gpioTerminate();
 }
 
+int file_i2c;
+int length;
+char buffer[2];
+
 /* direction 1 is send out, direction 2 is send in 
  * Function to control the sequense of the H bridge, Uses the i2c board as relays*/
 void hb_control(int direction){
-    char buf[2];
-    //int control = select_relay(relay);
+    //----- OPEN THE I2C BUS -----
+    char *filename = (char*)"/dev/i2c-1";
+    if ((file_i2c = open(filename, O_RDWR)) < 0){
+	    //ERROR HANDLING: you can check errno to see what went wrong
+	    printf("Failed to open the i2c bus");
+	    return;
+    }
+	    
+    int addr = 0x20;          //<<<<<The I2C address of the slave
+    if (ioctl(file_i2c, I2C_SLAVE, addr) < 0){
+	    printf("Failed to acquire bus access and/or talk to slave.\n");
+	    //ERROR HANDLING; you can check errno to see what went wrong
+	    return;
+    }
+	    
+    //----- WRITE BYTES -----
+    buffer[0] = 0x06;
+    if(direction == 1){ //send out
+        buffer[1] = 0xF6;	//DATA
+    }
+    else if(direction == 2){ // send in
+        buffer[1] = 0xF9;	//DATA
+    }
+    else{
+	buffer[1] = RELAYOFF; //OFF
+    }
+    length = 2;			//<<< Number of bytes to write
+    if (write(file_i2c, buffer, length) != length)		//write() returns the number of bytes actually written, if it doesn't match then an error occurred (e.g. no response from the device)
+    {
+	    /* ERROR HANDLING: i2c transaction failed */
+	    printf("Failed to write to the i2c bus.\n");
+    }
+
+    /*char buf[2];
     buf[0] = 0x06; 
     
     if(direction == 1){ //send out
-        buf[1] = 0xF6;		//DATA
+        buf[1] = 0xF6;	//DATA
     }
     else if(direction == 2){ // send in
-        buf[1] = 0xF9;		//DATA
+        buf[1] = 0xF9;	//DATA
     }
     else{
 	buf[1] = RELAYOFF; //OFF
-    }
+    }*/
+    /*bcm2835_init();
+    bcm2835_i2c_begin();                //Start I2C operations.
+    bcm2835_i2c_setSlaveAddress(0x20);  //I2C address
+    bcm2835_i2c_set_baudrate(10000); 
     bcm2835_i2c_write(buf,2);
+    bcm2835_i2c_end();  
+    bcm2835_close();  */
 }
 
 /* This function selects the actuator to run */
@@ -438,6 +485,11 @@ int count_display(int count, int state, bool state_change){
 /* Main loop :) */
 int main(int argc, char **argv)  {  
     
+    //setvbuf (stdout, NULL, _IONBF, 0); // needed to print to the command line
+    delay(100);
+    printf("Pin 1: %G \n", read_voltage(0x68,1, 18, 1, 1)); // read from adc chip 1, channel 1, 18 bit, pga gain set to 1 and continuous conversion mode
+    delay(100);
+    
     init();
     int state = 0;
     bool state_change = 0;
@@ -470,6 +522,10 @@ int main(int argc, char **argv)  {
 		act_control(state);
 		count = count_display(count, state, state_change);
 		state_change_delay(state_change, state);
+		printf("mode 2\n");
+		delay(100);
+		printf("Pin 1: %G \n", read_voltage(0x68,1, 18, 1, 1)); // read from adc chip 1, channel 1, 18 bit, pga gain set to 1 and continuous conversion mode
+		delay(100);
 	    }
 	    if (mode == 3){
 		turn_all_off();
