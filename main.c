@@ -40,10 +40,15 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
 
 /* Main loop :) */
 int main(int argc, char **argv)  {  
+    deinit();
+    
     init();
-    int state = 0;
-    bool state_change = 0;
-    int old_state = 0;
+    int state4 = 0;
+    bool state_change4 = 0;
+    int old_state4 = 0;
+    int state1 = 0;
+    bool state_change1 = 0;
+    int old_state1 = 0;
     struct inputmicroswitches micro;
     micro = initmicrostrut();
     micro = updatemicro(micro);
@@ -52,16 +57,14 @@ int main(int argc, char **argv)  {
     int estop = 0;
     int count = 0;
 
-    float avg_cur = 0;
+    float avg_cur = 3;
     float prev_avg_cur = 0;
     
     
     while(mode != 0){
 	delay(100);
 	micro = updatemicro(micro);
-	old_state = state;
-	state = stateupdate(state, micro);
-	state_change = check_state_change(state, old_state);
+	
 	estop = gpioRead(estop_pin);
 	if (estop == 1){
 	    turn_all_off();
@@ -72,24 +75,38 @@ int main(int argc, char **argv)  {
 	    if (mode == 1){ //send actuators home
 		mode = sendallhome(micro);
 	    }
-	    if (mode == 2){
-		act_control(state);
-		count = count_display(count, state, state_change);
-		state_change_delay(state_change, state);
+	    else if (mode == 2){
+		old_state4 = state4;
+		state4 = stateupdate(state4, micro, mode);
+		state_change4 = check_state_change(state4, old_state4);
+		act_control(state4);
+		count = count_display(count, state4, state_change4);
+		state_change_delay(state_change4, state4, mode);
 		avg_cur = update_current(avg_cur, prev_avg_cur);
+		mode = check_current(avg_cur, mode);
 		prev_avg_cur = avg_cur;
 		printf("current = %.3f\n", avg_cur);
 	    }
-	    if (mode == 3){
-		turn_all_off();
-		mode = 0;
+	    else if (mode == 3){
+		old_state1 = state1;
+		state1 = stateupdate(state1, micro, mode);
+		state_change1 = check_state_change(state1, old_state1);
+		act_control(state1);
+		count = count_display(count, state1, state_change1);
+		state_change_delay(state_change1, state1, mode);
+		avg_cur = update_current(avg_cur, prev_avg_cur);
+		mode = check_current(avg_cur, mode);
+		prev_avg_cur = avg_cur;
+		printf("current = %.3f\n", avg_cur);
+		//run_single_act(state)
 	    }
 	    
 	}
     }    
     
     
-    
+    turn_all_off();
     deinit();
+    printf("\nThe program has ended\n\n");
     return 0;  
 } 
