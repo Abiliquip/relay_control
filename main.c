@@ -15,7 +15,7 @@
 #include <bcm2835.h>  // delay function
 #include <pigpio.h> // when using pi gpio
 
-#include "struct_def.h"
+//#include "struct_def.h"
 #include "init.h"
 #include "control.h"
 #include "actuator_control.h"
@@ -82,6 +82,7 @@ int main(int argc, char **argv)  {
 	    }
 	    if (mode == 3){
 		turn_all_off();
+		mode = 0;
 	    }
 	    
 	}

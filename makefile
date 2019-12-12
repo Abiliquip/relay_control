@@ -4,7 +4,7 @@ HEADER	= ABE_ADCPi.h init.h control.h actuator_control.h struct_def.h current.h
 OUT	= opt
 CC	 = gcc
 FLAGS	 = -g -c -Wall
-LFLAGS	 = -lbcm2835 -lpigpio -lrt -lpthread -lgcc
+LFLAGS	 = -lbcm2835 -lpigpio -lrt -lpthread -lgcc_s
 
 all: $(OBJS)
 	$(CC) -g $(OBJS) -o $(OUT) $(LFLAGS)
