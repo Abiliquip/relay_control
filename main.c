@@ -37,11 +37,62 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
 }
 
 
+typedef struct barcode_s{
+    int barcode_1;
+    int barcode_2;
+    int barcode_3;
+    int barcode_4;
+}barcode_tag;
+
+barcode_tag init_barcode(){
+    barcode_tag barcode;
+    barcode.barcode_1 = 0;
+    barcode.barcode_2 = 0;
+    barcode.barcode_3 = 0;
+    barcode.barcode_4 = 0;
+    return barcode;
+}
+
+barcode_tag bar_code_check(int mode){
+    barcode_tag barcode = init_barcode();
+    int confermation = 0;
+    
+    
+    printf("Would you like to input a serial number?\n");
+    while(confermation == 0){
+	printf("Enter single digit\n\n");
+	scanf("%d", &mode);
+	printf("Was your number %d? \nEnter 1 for yes, 0 for no\n", mode);
+	scanf("%d", &confermation);
+    } 
+    
+    if (mode == 2){
+	barcode.barcode_1 = 2;
+	barcode.barcode_2 = 2;
+	barcode.barcode_3 = 2;
+	barcode.barcode_4 = 2;
+    }
+    else if(mode == 3){
+	barcode.barcode_1 = 3;
+	barcode.barcode_2 = 3;
+	barcode.barcode_3 = 3;
+	barcode.barcode_4 = 3;
+    }
+    return barcode;
+}
+
+void display_barcode(barcode_tag barcode){
+    printf("%d\n", barcode.barcode_1);
+    printf("%d\n", barcode.barcode_2);
+    printf("%d\n", barcode.barcode_3);
+    printf("%d\n", barcode.barcode_4);
+}
 
 /* Main loop :) */
 int main(int argc, char **argv)  {  
     deinit();
     
+    //Initialstion for device and variables
     init();
     int state4 = 0;
     bool state_change4 = 0;
@@ -56,10 +107,14 @@ int main(int argc, char **argv)  {
     mode = check_all_home(mode, micro);
     int estop = 0;
     int count = 0;
-
     float avg_cur = 3;
     float prev_avg_cur = 0;
+    barcode_tag barcode;
     
+    //Check bar code
+    barcode = bar_code_check(mode);
+    record_barcode();
+    display_barcode(barcode);
     
     while(mode != 0){
 	delay(100);
@@ -71,23 +126,22 @@ int main(int argc, char **argv)  {
 	    printf("ESTOP engaded\n" );
 	}
 	else if (estop == 0){
-	    
-	    if (mode == 1){ //send actuators home
+	    if (mode == 1){ 						//send actuators home
 		mode = sendallhome(micro);
 	    }
-	    else if (mode == 2){
-		old_state4 = state4;
-		state4 = stateupdate(state4, micro, mode);
-		state_change4 = check_state_change(state4, old_state4);
-		act_control(state4);
-		count = count_display(count, state4, state_change4);
-		state_change_delay(state_change4, state4, mode);
-		avg_cur = update_current(avg_cur, prev_avg_cur);
-		mode = check_current(avg_cur, mode);
-		prev_avg_cur = avg_cur;
-		printf("current = %.3f\n", avg_cur);
+	    else if (mode == 2){ 					//run four actuators
+		old_state4 = state4; 					//Updates old state
+		state4 = stateupdate(state4, micro, mode); 		//checks if new state is needed
+		state_change4 = check_state_change(state4, old_state4); //if state is changed needs delay
+		act_control(state4); 					//Function to move actuator
+		count = count_display(count, state4, state_change4); 	//update cycle count
+		state_change_delay(state_change4, state4, mode); 	//delay at the end of movement
+		avg_cur = update_current(avg_cur, prev_avg_cur); 	//get new current value
+		mode = check_current(avg_cur, mode);			//check current is large
+		prev_avg_cur = avg_cur; 				//used for moving average calc
+		printf("current = %.2f\n", avg_cur);
 	    }
-	    else if (mode == 3){
+	    else if (mode == 3){ 					// run one actuator
 		old_state1 = state1;
 		state1 = stateupdate(state1, micro, mode);
 		state_change1 = check_state_change(state1, old_state1);
@@ -97,10 +151,8 @@ int main(int argc, char **argv)  {
 		avg_cur = update_current(avg_cur, prev_avg_cur);
 		mode = check_current(avg_cur, mode);
 		prev_avg_cur = avg_cur;
-		printf("current = %.3f\n", avg_cur);
-		//run_single_act(state)
+		printf("current = %.2f\n", avg_cur);
 	    }
-	    
 	}
     }    
     
