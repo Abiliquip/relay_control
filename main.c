@@ -16,11 +16,10 @@
 #include <pigpio.h> // when using pi gpio
 
 #include "struct_def.h"
-#include "ABE_ADCPi.h"
 #include "init.h"
 #include "control.h"
 #include "actuator_control.h"
-
+#include "current.h"
 
 
 
@@ -39,7 +38,6 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
 
 
 
-
 /* Main loop :) */
 int main(int argc, char **argv)  {  
     init();
@@ -53,9 +51,13 @@ int main(int argc, char **argv)  {
     mode = check_all_home(mode, micro);
     int estop = 0;
     int count = 0;
+
+    float avg_cur = 0;
+    float prev_avg_cur = 0;
+    
     
     while(mode != 0){
-	delay(200);
+	delay(100);
 	micro = updatemicro(micro);
 	old_state = state;
 	state = stateupdate(state, micro);
@@ -63,7 +65,7 @@ int main(int argc, char **argv)  {
 	estop = gpioRead(estop_pin);
 	if (estop == 1){
 	    turn_all_off();
-	    printf("estop engaded\n" );
+	    printf("ESTOP engaded\n" );
 	}
 	else if (estop == 0){
 	    
@@ -74,10 +76,9 @@ int main(int argc, char **argv)  {
 		act_control(state);
 		count = count_display(count, state, state_change);
 		state_change_delay(state_change, state);
-		//printf("mode 2\n");
-		delay(100);
-		printf("Pin 1: %G \n", read_voltage(0x68,1, 18, 1, 1)); // read from adc chip 1, channel 1, 18 bit, pga gain set to 1 and continuous conversion mode
-		delay(100);
+		avg_cur = update_current(avg_cur, prev_avg_cur);
+		prev_avg_cur = avg_cur;
+		printf("current = %.3f\n", avg_cur);
 	    }
 	    if (mode == 3){
 		turn_all_off();
