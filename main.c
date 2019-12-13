@@ -22,7 +22,6 @@
 #include "current.h"
 #include "barcode.h"
 
-typedef struct barcode_s barcode_tag;
 
 /* Read the micro switch gpio */
 struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
@@ -42,44 +41,7 @@ struct inputmicroswitches updatemicro(struct inputmicroswitches micro){
 
 
 
-barcode_tag bar_code_check(int mode){
-    barcode_tag barcode = init_barcode();
-    int confermation = 0;
-    
-    printf("Would you like to input a serial number?\n");
-    printf("\nEnter 1 for yes, 0 for no\n");
-    scanf("%d", &confermation);
-    if(confermation == 0){
-	return barcode;
-    }
-    
-    if (mode == 2){
-	printf("Enter Barcode 1\n");
-	scanf("%d", &barcode.barcode_1);
-	printf("Enter Barcode 2\n");
-	scanf("%d", &barcode.barcode_2);
-	printf("Enter Barcode 3\n");
-	scanf("%d", &barcode.barcode_3);
-	printf("Enter Barcode 4\n");
-	scanf("%d", &barcode.barcode_4);
-    }
-    else if(mode == 3){
-	printf("Enter Barcode 1\n");
-	scanf("%d", &barcode.barcode_1);    
-    }
-    return barcode;
-}
 
-void display_barcode(barcode_tag barcode, int mode){
-    if( mode == 1){
-	printf("%d\n", barcode.barcode_1);
-    }
-    if (mode == 2){
-	printf("%d\n", barcode.barcode_2);
-	printf("%d\n", barcode.barcode_3);
-	printf("%d\n", barcode.barcode_4);
-    }
-}
 
 /* Main loop :) */
 int main(int argc, char **argv)  {  
